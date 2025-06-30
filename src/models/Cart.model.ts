@@ -1,5 +1,14 @@
 import mongoose from "mongoose";
 
+export interface ICart extends mongoose.Document {
+  userId: mongoose.Types.ObjectId;
+  products: {
+    productId: mongoose.Types.ObjectId;
+    quantity: number;
+  }[];
+  totalPrice: number;
+}
+
 const cartSchema = new mongoose.Schema(
   {
     userId: {
@@ -23,4 +32,4 @@ const cartSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-module.exports = mongoose.model("Cart", cartSchema);
+export const Cart = mongoose.model<ICart>("Cart", cartSchema);
