@@ -273,8 +273,6 @@ export const changePassword = asyncWrapper(
         .status(StatusCodes.NOT_FOUND)
         .json(createResponse("User not found", null));
     }
-
-    // Verify current password
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
       return res
@@ -282,7 +280,6 @@ export const changePassword = asyncWrapper(
         .json(createResponse("Current password is incorrect", null));
     }
 
-    // Hash new password
     const hashedPassword = await bcrypt.hash(
       newPassword,
       Number(process.env.SALT_ROUNDS) || 12
