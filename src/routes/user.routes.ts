@@ -8,8 +8,7 @@ const router = Router();
 router.get("/", userController.getAllUsers);
 router.get("/:id", userController.getUserById);
 
-// Protected routes (User must be authenticated)
-router.use(authorization); // Apply authentication to all routes below
+router.use(authorization);
 
 // Profile management
 router.put("/profile/update", userController.updateProfile);
@@ -42,7 +41,7 @@ router.get("/blocked/pharmacies", userController.getBlockedPharmacies);
 router.post("/block/pharmacy", userController.blockPharmacy);
 router.delete("/block/pharmacy/:pharmacyId", userController.unblockPharmacy);
 
-// Dashboard
-router.get("/dashboard/stats", userController.getDashboardStats);
+// // Dashboard
+// router.get("/dashboard/stats", userController.getDashboardStats);
 
 export default router;
