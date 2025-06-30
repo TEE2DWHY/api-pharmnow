@@ -12,7 +12,6 @@ import asyncWrapper from "../middlewares/asyncWrapper.middleware";
 export const getAllUsers = asyncWrapper(async (req: Request, res: Response) => {
   const { page = 1, limit = 10, search, isVerified } = req.query;
 
-  // Build query
   const query: any = {};
 
   if (search) {
@@ -161,7 +160,6 @@ export const addFavouritePharmacy = asyncWrapper(
         .json(createResponse("Authentication required", null));
     }
 
-    // Check if pharmacy exists
     const pharmacy = await Pharmacy.findById(pharmacyId);
     if (!pharmacy) {
       return res
@@ -176,7 +174,6 @@ export const addFavouritePharmacy = asyncWrapper(
         .json(createResponse("User not found", null));
     }
 
-    // Check if already in favourites
     if (user.favouritePharmacies.includes(pharmacyId)) {
       return res
         .status(StatusCodes.BAD_REQUEST)
@@ -236,7 +233,6 @@ export const addFavouriteProduct = asyncWrapper(
         .json(createResponse("Authentication required", null));
     }
 
-    // Check if product exists
     const product = await Product.findById(productId);
     if (!product) {
       return res
@@ -251,7 +247,6 @@ export const addFavouriteProduct = asyncWrapper(
         .json(createResponse("User not found", null));
     }
 
-    // Check if already in favourites
     if (user.favouriteProducts.includes(productId)) {
       return res
         .status(StatusCodes.BAD_REQUEST)
@@ -316,7 +311,7 @@ export const getFavouritePharmacies = asyncWrapper(
       populate: {
         path: "products",
         select: "name price",
-        options: { limit: 5 }, // Show only first 5 products
+        options: { limit: 5 },
       },
     });
 
@@ -427,7 +422,6 @@ export const blockPharmacy = asyncWrapper(
         .json(createResponse("Authentication required", null));
     }
 
-    // Check if pharmacy exists
     const pharmacy = await Pharmacy.findById(pharmacyId);
     if (!pharmacy) {
       return res
@@ -435,14 +429,12 @@ export const blockPharmacy = asyncWrapper(
         .json(createResponse("Pharmacy not found", null));
     }
 
-    // Update user's blocked pharmacies
     const user = await User.findByIdAndUpdate(
       userId,
       { $addToSet: { blockedPharmacies: pharmacyId } },
       { new: true }
     );
 
-    // Update pharmacy's blocked by users
     await Pharmacy.findByIdAndUpdate(pharmacyId, {
       $addToSet: { blockedByUsers: userId },
     });
@@ -465,12 +457,10 @@ export const unblockPharmacy = asyncWrapper(
         .json(createResponse("Authentication required", null));
     }
 
-    // Update user's blocked pharmacies
     await User.findByIdAndUpdate(userId, {
       $pull: { blockedPharmacies: pharmacyId },
     });
 
-    // Update pharmacy's blocked by users
     await Pharmacy.findByIdAndUpdate(pharmacyId, {
       $pull: { blockedByUsers: userId },
     });
@@ -526,7 +516,6 @@ export const deleteAccount = asyncWrapper(
         .json(createResponse("Authentication required", null));
     }
 
-    // Verify password before deletion
     const user = await User.findById(userId).select("+password");
     if (!user) {
       return res
@@ -540,9 +529,6 @@ export const deleteAccount = asyncWrapper(
         .status(StatusCodes.BAD_REQUEST)
         .json(createResponse("Incorrect password", null));
     }
-
-    // TODO: Handle related data cleanup (orders, messages, etc.)
-    // You might want to soft delete or anonymize data instead of hard delete
 
     await User.findByIdAndDelete(userId);
 

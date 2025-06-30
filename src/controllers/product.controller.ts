@@ -467,7 +467,7 @@ export const getFeaturedProducts = asyncWrapper(
           score: {
             $add: [
               { $ifNull: [{ $arrayElemAt: ["$orderStats.orderCount", 0] }, 0] },
-              { $multiply: ["$pharmacy.isVerified", 10] }, // Boost verified pharmacies
+              { $multiply: ["$pharmacy.isVerified", 10] },
             ],
           },
         },

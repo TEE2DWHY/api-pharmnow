@@ -6,6 +6,7 @@ import Pharmacy from "../models/Pharmacy.model";
 import Product from "../models/Product.model";
 import Order from "../models/Order.model";
 import createResponse from "../utils/createResponse.util";
+import Message from "../models/Message.model";
 
 // GET ALL PHARMACIES
 export const getAllPharmacies = asyncWrapper(
@@ -20,7 +21,6 @@ export const getAllPharmacies = asyncWrapper(
       sortOrder = "desc",
     } = req.query;
 
-    // Build query
     const query: any = {};
 
     if (search) {
@@ -85,7 +85,6 @@ export const getPharmacyById = asyncWrapper(
         .json(createResponse("Pharmacy not found", null));
     }
 
-    // Get pharmacy statistics
     const [totalProducts, totalOrders, averageRating] = await Promise.all([
       Product.countDocuments({ pharmacyId: id }),
       Order.countDocuments({ pharmacyId: id }),
@@ -237,7 +236,6 @@ export const addProduct = asyncWrapper(async (req: Request, res: Response) => {
     pharmacyId,
   });
 
-  // Add product to pharmacy's products array
   await Pharmacy.findByIdAndUpdate(pharmacyId, {
     $push: { products: product._id },
   });
@@ -266,7 +264,6 @@ export const removeProduct = asyncWrapper(
         .json(createResponse("Authentication required", null));
     }
 
-    // Check if product belongs to this pharmacy
     const product = await Product.findOne({ _id: productId, pharmacyId });
     if (!product) {
       return res
@@ -279,10 +276,8 @@ export const removeProduct = asyncWrapper(
         );
     }
 
-    // Remove product from product collection
     await Product.findByIdAndDelete(productId);
 
-    // Remove product from pharmacy's products array
     await Pharmacy.findByIdAndUpdate(pharmacyId, {
       $pull: { products: productId },
     });
@@ -307,7 +302,6 @@ export const getPharmacyProducts = asyncWrapper(
       sortOrder = "desc",
     } = req.query;
 
-    // Build query
     const query: any = { pharmacyId: id };
 
     if (category) {
@@ -325,7 +319,6 @@ export const getPharmacyProducts = asyncWrapper(
       ];
     }
 
-    // Build sort object
     const sort: any = {};
     sort[sortBy as string] = sortOrder === "asc" ? 1 : -1;
 
@@ -369,7 +362,6 @@ export const blockUser = asyncWrapper(async (req: Request, res: Response) => {
       .json(createResponse("Authentication required", null));
   }
 
-  // Check if user exists
   const user = await User.findById(userId);
   if (!user) {
     return res
@@ -377,12 +369,10 @@ export const blockUser = asyncWrapper(async (req: Request, res: Response) => {
       .json(createResponse("User not found", null));
   }
 
-  // Update pharmacy's blocked users
   await Pharmacy.findByIdAndUpdate(pharmacyId, {
     $addToSet: { blockedUsers: userId },
   });
 
-  // Update user's blocked by pharmacies
   await User.findByIdAndUpdate(userId, {
     $addToSet: { blockedByPharmacies: pharmacyId },
   });
@@ -410,12 +400,10 @@ export const unblockUser = asyncWrapper(async (req: Request, res: Response) => {
       .json(createResponse("Authentication required", null));
   }
 
-  // Update pharmacy's blocked users
   await Pharmacy.findByIdAndUpdate(pharmacyId, {
     $pull: { blockedUsers: userId },
   });
 
-  // Update user's blocked by pharmacies
   await User.findByIdAndUpdate(userId, {
     $pull: { blockedByPharmacies: pharmacyId },
   });
@@ -616,7 +604,6 @@ export const deletePharmacyAccount = asyncWrapper(
         .json(createResponse("Please provide correct confirmation text", null));
     }
 
-    // Check for pending orders
     const pendingOrders = await Order.countDocuments({
       pharmacyId,
       status: { $in: ["pending", "confirmed", "preparing", "shipped"] },
@@ -633,19 +620,13 @@ export const deletePharmacyAccount = asyncWrapper(
         );
     }
 
-    // TODO: Handle related data cleanup (products, messages, etc.)
-    // You might want to soft delete or transfer data instead of hard delete
-
-    // Delete all pharmacy products
     await Product.deleteMany({ pharmacyId });
 
-    // Remove pharmacy from users' favourites
     await User.updateMany(
       { favouritePharmacies: pharmacyId },
       { $pull: { favouritePharmacies: pharmacyId } }
     );
 
-    // Delete pharmacy account
     await Pharmacy.findByIdAndDelete(pharmacyId);
 
     res
