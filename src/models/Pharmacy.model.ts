@@ -61,4 +61,6 @@ const pharmacySchema = new mongoose.Schema<IPharmacy>(
   }
 );
 
-export const Pharmacy = mongoose.model<IPharmacy>("Pharmacy", pharmacySchema);
+const Pharmacy = mongoose.model<IPharmacy>("Pharmacy", pharmacySchema);
+
+export default Pharmacy;

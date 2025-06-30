@@ -47,7 +47,9 @@ const pharmacyOrderSchema = new mongoose.Schema<IPharmacyOrder>(
   }
 );
 
-export const PharmacyOrder = mongoose.model<IPharmacyOrder>(
+const PharmacyOrder = mongoose.model<IPharmacyOrder>(
   "PharmacyOrder",
   pharmacyOrderSchema
 );
+
+export default PharmacyOrder;

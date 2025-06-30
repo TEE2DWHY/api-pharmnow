@@ -1,22 +1,39 @@
-import express, { Request, Response } from "express";
+import express from "express";
+import connect from "./db/connect.db";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimiter from "express-rate-limit";
+import errorHandler from "./middlewares/errorHandler";
+import notFound from "./middlewares/notFound";
+import configRouter from "./routes/config.routes";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+app.use(helmet());
+app.use(
+  rateLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+  })
+);
+app.use(configRouter);
+app.use(express.static("./public"));
+app.use(errorHandler);
+app.use(notFound);
 
-// // Routes
-// app.get("/", (req: Request, res: Response) => {
-//   res.json({ message: "Hello from TypeScript Express server!" });
-// });
+const PORT = process.env.PORT || 8000;
 
-// app.get("/api/users", (req: Request, res: Response) => {
-//   res.json({ users: ["John", "Jane", "Bob"] });
-// });
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+const start = async () => {
+  try {
+    await connect(process.env.MONGO_URI as string);
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.log(err);
+  }
+};
+start();

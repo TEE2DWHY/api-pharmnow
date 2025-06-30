@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { StatusCodes } from "http-status-codes";
 import jwt from "jsonwebtoken";
-import asyncWrapper from "../middlewares/asyncWrapper";
+import asyncWrapper from "./asyncWrapper.middleware";
 
 declare global {
   namespace Express {
@@ -86,28 +86,28 @@ export const authorization = asyncWrapper(
   }
 );
 
-// export const authorizeRoles = (...roles: ("User" | "Pharmacy")[]) => {
-//   return asyncWrapper(
-//     async (req: Request, res: Response, next: NextFunction) => {
-//       if (!req.user) {
-//         return res.status(StatusCodes.UNAUTHORIZED).json({
-//           success: false,
-//           message: "Access denied. Please authenticate first.",
-//         });
-//       }
+export const authorizeRoles = (...roles: ("User" | "Pharmacy")[]) => {
+  return asyncWrapper(
+    async (req: Request, res: Response, next: NextFunction) => {
+      if (!req.user) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+          success: false,
+          message: "Access denied. Please authenticate first.",
+        });
+      }
 
-//       if (!req.user.userType || !roles.includes(req.user.userType)) {
-//         return res.status(StatusCodes.FORBIDDEN).json({
-//           success: false,
-//           message: `Access denied. This resource requires ${roles.join(
-//             " or "
-//           )} access.`,
-//         });
-//       }
+      if (!req.user.userType || !roles.includes(req.user.userType)) {
+        return res.status(StatusCodes.FORBIDDEN).json({
+          success: false,
+          message: `Access denied. This resource requires ${roles.join(
+            " or "
+          )} access.`,
+        });
+      }
 
-//       next();
-//     }
-//   );
-// };
+      next();
+    }
+  );
+};
 
 export default authorization;

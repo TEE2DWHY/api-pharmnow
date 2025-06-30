@@ -127,4 +127,5 @@ const messageSchema = new mongoose.Schema<IMessage>(
 messageSchema.index({ sender: 1, receiver: 1 });
 messageSchema.index({ createdAt: -1 });
 
-export const Message = mongoose.model<IMessage>("Message", messageSchema);
+const Message = mongoose.model<IMessage>("Message", messageSchema);
+export default Message;

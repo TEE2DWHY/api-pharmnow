@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import bcrypt from "bcrypt";
-import asyncWrapper from "../middlewares/asyncWrapper";
-import { User } from "../models/User.model";
+import asyncWrapper from "../middlewares/asyncWrapper.middleware";
+import User from "../models/User.model";
 import { generateToken } from "../helper/authHelper";
 
 // REGISTER
