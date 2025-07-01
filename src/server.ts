@@ -1,19 +1,26 @@
+import chalk from "chalk";
 import app from "./app";
 import connect from "./db/connect.db";
 import dotenv from "dotenv";
+
 dotenv.config();
 
 const PORT = process.env.PORT || 8000;
 
 const start = async () => {
-  console.log("Starting Server...");
+  console.log(chalk.blue("Starting Server..."));
+
   try {
     await connect(process.env.MONGODB_URI as string);
+    console.log(chalk.green("✔ Successfully connected to MongoDB"));
     app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+      console.log(
+        chalk.greenBright(`🚀 Server is running on port ${PORT}`) +
+          chalk.blue(` at http://localhost:${PORT}`)
+      );
     });
   } catch (err) {
-    console.error(err);
+    console.error(chalk.red("❌ Error starting server:"), err);
   }
 };
 

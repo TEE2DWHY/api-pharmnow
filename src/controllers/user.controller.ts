@@ -52,7 +52,7 @@ export const getAllUsers = asyncWrapper(async (req: Request, res: Response) => {
 
 // GET USER BY ID
 export const getUserById = asyncWrapper(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req?.user?.userId;
 
   const user = await User.findById(id)
     .select(

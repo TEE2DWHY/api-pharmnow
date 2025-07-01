@@ -6,9 +6,10 @@ const router = Router();
 
 // Public routes (Admin access - you might want to add admin middleware)
 router.get("/", userController.getAllUsers);
-router.get("/:id", userController.getUserById);
 
 router.use(authorization);
+
+router.get("/get-user", userController.getUserById);
 
 // Profile management
 router.put("/profile/update", userController.updateProfile);
