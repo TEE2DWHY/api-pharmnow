@@ -10,7 +10,6 @@ const router = Router();
 // All routes require authentication
 router.use(authorization);
 
-// Cart management (User only)
 router.get("/", authorizeRoles("User"), cartController.getCart);
 router.get("/summary", authorizeRoles("User"), cartController.getCartSummary);
 router.post("/add", authorizeRoles("User"), cartController.addToCart);
@@ -22,7 +21,6 @@ router.delete(
 );
 router.delete("/clear", authorizeRoles("User"), cartController.clearCart);
 
-// Advanced cart operations
 router.post(
   "/move-to-favorites/:productId",
   authorizeRoles("User"),

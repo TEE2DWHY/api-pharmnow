@@ -1,35 +1,32 @@
+// src/routes/order.routes.ts
 import { Router } from "express";
-import * as orderController from "../controllers/order.controller";
 import {
-  authorization,
-  authorizeRoles,
-} from "../middlewares/authorization.middlware";
-
+  getUserOrders,
+  getPharmacyOrders,
+  getOrderById,
+  createOrder,
+  cancelOrder,
+  addOrderReview,
+  getOrderStatistics,
+  declineOrder,
+  updateOrderStatus,
+} from "../controllers/order.controller";
+import authorization from "../middlewares/authorization.middlware";
 const router = Router();
 
 router.use(authorization);
 
-router.get("/statistics", orderController.getOrderStatistics);
-router.post("/", authorizeRoles("User"), orderController.createOrder);
-router.get("/my-orders", authorizeRoles("User"), orderController.getUserOrders);
-router.get(
-  "/pharmacy-orders",
-  authorizeRoles("Pharmacy"),
-  orderController.getPharmacyOrders
-);
-router.put(
-  "/:id/status",
-  authorizeRoles("Pharmacy"),
-  orderController.updateOrderStatus
-);
-router.get("/:id", orderController.getOrderById);
-router.put("/:id/cancel", orderController.cancelOrder);
-router.post(
-  "/:id/review",
-  authorizeRoles("User"),
-  orderController.addOrderReview
-);
-router.get("/", orderController.getAllOrders);
-router.put("/:id/payment-status", orderController.updatePaymentStatus);
+// User Routes
+router.get("/user", getUserOrders);
+router.post("/", createOrder);
+router.post("/:orderId/review", addOrderReview);
+router.post("/:orderId/cancel", cancelOrder);
+router.get("/statistics", getOrderStatistics);
+router.get("/:orderId", getOrderById);
+
+// Pharmacy Routes
+router.get("/pharmacy", getPharmacyOrders);
+router.post("/:orderId/decline", declineOrder);
+router.patch("/:orderId/status", updateOrderStatus);
 
 export default router;

@@ -1,16 +1,19 @@
-import mongoose from "mongoose";
+// src/models/Order.model.ts
+import mongoose, { Document, Schema } from "mongoose";
 
 export interface IOrderProduct {
   productId: mongoose.Types.ObjectId;
   quantity: number;
+  priceAtTime: number;
 }
 
 export interface IOrderReview {
   rating?: number;
   comment?: string;
+  createdAt?: Date;
 }
 
-export interface IOrder extends mongoose.Document {
+export interface IOrder extends Document {
   userId: mongoose.Types.ObjectId;
   pharmacyId: mongoose.Types.ObjectId;
   products: IOrderProduct[];
@@ -18,39 +21,53 @@ export interface IOrder extends mongoose.Document {
   status:
     | "pending"
     | "confirmed"
+    | "declined"
     | "preparing"
+    | "ready_for_pickup"
     | "picked_up"
     | "shipped"
     | "delivered"
     | "cancelled";
   orderCode: string;
   deliveryAddress: string;
-  paymentMethod: "credit_card" | "transfer";
+  deliveryType: "pickup" | "delivery";
+  paymentMethod: "credit_card" | "transfer" | "cash_on_delivery";
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
   estimatedDelivery?: Date;
   actualDelivery?: Date;
   review?: IOrderReview;
   notes?: string;
+  cancellationReason?: string;
+  declineReason?: string;
+  cancelledBy?: "user" | "pharmacy" | "system";
   createdAt: Date;
   updatedAt: Date;
+
+  canBeCancelled(): boolean;
+  canBeDeclined(): boolean;
+  canBeReviewed(): boolean;
+  isReadyForDelivery(): boolean;
+  isFinalStatus(): boolean;
 }
 
-const orderSchema = new mongoose.Schema<IOrder>(
+const orderSchema = new Schema<IOrder>(
   {
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
     pharmacyId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "Pharmacy",
       required: true,
+      index: true,
     },
     products: [
       {
         productId: {
-          type: mongoose.Schema.Types.ObjectId,
+          type: Schema.Types.ObjectId,
           ref: "Product",
           required: true,
         },
@@ -58,6 +75,11 @@ const orderSchema = new mongoose.Schema<IOrder>(
           type: Number,
           required: true,
           min: [1, "Quantity must be at least 1"],
+        },
+        priceAtTime: {
+          type: Number,
+          required: true,
+          min: [0, "Price cannot be negative"],
         },
       },
     ],
@@ -68,19 +90,19 @@ const orderSchema = new mongoose.Schema<IOrder>(
     },
     status: {
       type: String,
-      enum: {
-        values: [
-          "pending",
-          "confirmed",
-          "preparing",
-          "picked_up",
-          "shipped",
-          "delivered",
-          "cancelled",
-        ],
-        message: "Invalid order status",
-      },
+      enum: [
+        "pending",
+        "confirmed",
+        "declined",
+        "preparing",
+        "ready_for_pickup",
+        "picked_up",
+        "shipped",
+        "delivered",
+        "cancelled",
+      ],
       default: "pending",
+      index: true,
     },
     orderCode: {
       type: String,
@@ -98,20 +120,19 @@ const orderSchema = new mongoose.Schema<IOrder>(
       required: true,
       trim: true,
     },
+    deliveryType: {
+      type: String,
+      enum: ["pickup", "delivery"],
+      default: "delivery",
+    },
     paymentMethod: {
       type: String,
-      enum: {
-        values: ["credit_card", "transfer"],
-        message: "Invalid payment method",
-      },
+      enum: ["credit_card", "transfer", "cash_on_delivery"],
       required: true,
     },
     paymentStatus: {
       type: String,
-      enum: {
-        values: ["pending", "paid", "failed", "refunded"],
-        message: "Invalid payment status",
-      },
+      enum: ["pending", "paid", "failed", "refunded"],
       default: "pending",
     },
     estimatedDelivery: {
@@ -131,11 +152,29 @@ const orderSchema = new mongoose.Schema<IOrder>(
         maxlength: [500, "Review comment cannot exceed 500 characters"],
         trim: true,
       },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
     },
     notes: {
       type: String,
       maxlength: [1000, "Notes cannot exceed 1000 characters"],
       trim: true,
+    },
+    cancellationReason: {
+      type: String,
+      maxlength: [500, "Cancellation reason cannot exceed 500 characters"],
+      trim: true,
+    },
+    declineReason: {
+      type: String,
+      maxlength: [500, "Decline reason cannot exceed 500 characters"],
+      trim: true,
+    },
+    cancelledBy: {
+      type: String,
+      enum: ["user", "pharmacy", "system"],
     },
   },
   {
@@ -143,6 +182,41 @@ const orderSchema = new mongoose.Schema<IOrder>(
   }
 );
 
-const Order = mongoose.model("Order", orderSchema);
+// Indexes
+orderSchema.index({ userId: 1, createdAt: -1 });
+orderSchema.index({ pharmacyId: 1, createdAt: -1 });
+orderSchema.index({ pharmacyId: 1, status: 1 });
+orderSchema.index({ orderCode: 1 });
 
+// Pre-save hook to auto-calculate estimatedDelivery
+orderSchema.pre<IOrder>("save", function (next) {
+  if (this.isNew && !this.estimatedDelivery) {
+    const days = this.deliveryType === "pickup" ? 1 : 3;
+    this.estimatedDelivery = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  }
+  next();
+});
+
+// Instance methods
+orderSchema.methods.canBeCancelled = function () {
+  return ["pending", "confirmed"].includes(this.status);
+};
+
+orderSchema.methods.canBeDeclined = function () {
+  return this.status === "pending";
+};
+
+orderSchema.methods.canBeReviewed = function () {
+  return this.status === "delivered" && !this.review?.rating;
+};
+
+orderSchema.methods.isReadyForDelivery = function () {
+  return ["ready_for_pickup", "shipped"].includes(this.status);
+};
+
+orderSchema.methods.isFinalStatus = function () {
+  return ["delivered", "cancelled", "declined"].includes(this.status);
+};
+
+const Order = mongoose.model<IOrder>("Order", orderSchema);
 export default Order;
