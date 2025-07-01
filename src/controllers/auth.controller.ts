@@ -6,6 +6,8 @@ import User from "../models/User.model";
 import { generateToken } from "../helper/authHelper";
 import createResponse from "../utils/createResponse.util";
 import { createInternalNotification } from "../utils/createNotification.util";
+import { sendEmail } from "../utils/email.util";
+import verifyEmailMessage from "../services/email/template/verifyEmailTemplate";
 
 // REGISTER
 export const register = asyncWrapper(async (req: Request, res: Response) => {
@@ -42,16 +44,21 @@ export const register = asyncWrapper(async (req: Request, res: Response) => {
     blockedByPharmacies: [],
   });
 
-  const verificationCode = Math.floor(
-    100000 + Math.random() * 900000
-  ).toString();
+  const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
 
   (newUser as any).verificationCode = verificationCode;
 
   await newUser.save();
 
-  // TODO: Send verification email with verificationCode
-  console.log(`Verification code for ${email}: ${verificationCode}`);
+  await sendEmail({
+    email: email,
+    subject: "Welcome to Pharmnow",
+    message: verifyEmailMessage({
+      verificationCode: verificationCode,
+      fullname: newUser.fullname,
+      year: new Date().getFullYear(),
+    }),
+  });
 
   res.status(StatusCodes.CREATED).json(
     createResponse("User registered successfully. Please verify your email.", {

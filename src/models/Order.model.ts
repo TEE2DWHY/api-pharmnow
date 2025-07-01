@@ -1,5 +1,4 @@
-// src/models/Order.model.ts
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose from "mongoose";
 
 export interface IOrderProduct {
   productId: mongoose.Types.ObjectId;
@@ -13,7 +12,7 @@ export interface IOrderReview {
   createdAt?: Date;
 }
 
-export interface IOrder extends Document {
+export interface IOrder extends mongoose.Document {
   userId: mongoose.Types.ObjectId;
   pharmacyId: mongoose.Types.ObjectId;
   products: IOrderProduct[];
@@ -50,16 +49,16 @@ export interface IOrder extends Document {
   isFinalStatus(): boolean;
 }
 
-const orderSchema = new Schema<IOrder>(
+const orderSchema = new mongoose.Schema<IOrder>(
   {
     userId: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
       index: true,
     },
     pharmacyId: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Pharmacy",
       required: true,
       index: true,
@@ -67,7 +66,7 @@ const orderSchema = new Schema<IOrder>(
     products: [
       {
         productId: {
-          type: Schema.Types.ObjectId,
+          type: mongoose.Schema.Types.ObjectId,
           ref: "Product",
           required: true,
         },
@@ -182,13 +181,10 @@ const orderSchema = new Schema<IOrder>(
   }
 );
 
-// Indexes
 orderSchema.index({ userId: 1, createdAt: -1 });
 orderSchema.index({ pharmacyId: 1, createdAt: -1 });
 orderSchema.index({ pharmacyId: 1, status: 1 });
-orderSchema.index({ orderCode: 1 });
 
-// Pre-save hook to auto-calculate estimatedDelivery
 orderSchema.pre<IOrder>("save", function (next) {
   if (this.isNew && !this.estimatedDelivery) {
     const days = this.deliveryType === "pickup" ? 1 : 3;
@@ -197,7 +193,6 @@ orderSchema.pre<IOrder>("save", function (next) {
   next();
 });
 
-// Instance methods
 orderSchema.methods.canBeCancelled = function () {
   return ["pending", "confirmed"].includes(this.status);
 };
