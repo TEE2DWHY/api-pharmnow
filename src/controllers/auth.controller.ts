@@ -26,6 +26,9 @@ export const register = asyncWrapper(async (req: Request, res: Response) => {
     Number(process.env.SALT_ROUNDS) || 12
   );
 
+  const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
+  const verificationCodeExpires = Date.now() + 10 * 60 * 1000;
+
   const newUser = new User({
     fullname,
     email,
@@ -43,31 +46,49 @@ export const register = asyncWrapper(async (req: Request, res: Response) => {
     orders: [],
     blockedPharmacies: [],
     blockedByPharmacies: [],
+    verificationCode: verificationCode,
+    verificationCodeExpires: verificationCodeExpires,
   });
-
-  const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
-
-  (newUser as any).verificationCode = verificationCode;
 
   await newUser.save();
 
-  await sendEmail({
-    email: email,
-    subject: "Welcome to Pharmnow",
-    message: verifyEmailTemplate({
-      verificationCode: verificationCode,
-      fullname: newUser.fullname,
-      year: new Date().getFullYear(),
-    }),
-  });
+  try {
+    await sendEmail({
+      email: email,
+      subject: "Welcome to PharmNow - Verify Your Account",
+      message: verifyEmailTemplate({
+        verificationCode: verificationCode,
+        fullname: newUser.fullname,
+        year: new Date().getFullYear(),
+      }),
+    });
 
-  res.status(StatusCodes.CREATED).json(
-    createResponse("User registered successfully. Please verify your email.", {
-      email: newUser.email,
-      fullname: newUser.fullname,
-      isVerified: newUser.isVerified,
-    })
-  );
+    res.status(StatusCodes.CREATED).json(
+      createResponse(
+        "User registered successfully. Please verify your email.",
+        {
+          email: newUser.email,
+          fullname: newUser.fullname,
+          isVerified: newUser.isVerified,
+          message:
+            "A 4-digit verification code has been sent to your email address.",
+        }
+      )
+    );
+  } catch (emailError) {
+    console.error("Email sending failed:", emailError);
+    res.status(StatusCodes.CREATED).json(
+      createResponse(
+        "User registered successfully, but email verification could not be sent. Please try again.",
+        {
+          email: newUser.email,
+          fullname: newUser.fullname,
+          isVerified: newUser.isVerified,
+          emailSent: false,
+        }
+      )
+    );
+  }
 });
 
 // LOGIN
@@ -140,7 +161,7 @@ export const forgotPassword = asyncWrapper(
 
     await sendEmail({
       email: email,
-      subject: "Reset Password Pharmnow",
+      subject: "Reset Your PharmNow Password",
       message: resetPasswordTemplate({
         resetToken: resetToken,
         fullname: user.fullname,
@@ -204,21 +225,52 @@ export const verifyCode = asyncWrapper(async (req: Request, res: Response) => {
       .json(createResponse("Invalid email or verification code", null));
   }
 
-  if ((user as any).verificationCode !== verificationCode) {
-    return res
-      .status(StatusCodes.BAD_REQUEST)
-      .json(createResponse("Verification code is incorrect", null));
-  }
-
   if (user.isVerified) {
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json(createResponse("Email is already verified", null));
   }
 
+  if (!(user as any).verificationCode) {
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json(
+        createResponse(
+          "No verification code found. Please request a new one.",
+          null
+        )
+      );
+  }
+
+  if (
+    (user as any).verificationCodeExpires &&
+    (user as any).verificationCodeExpires < Date.now()
+  ) {
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json(
+        createResponse(
+          "Verification code has expired. Please request a new one.",
+          null
+        )
+      );
+  }
+
+  if ((user as any).verificationCode !== verificationCode) {
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json(createResponse("Verification code is incorrect", null));
+  }
+
   await User.updateOne(
     { _id: user._id },
-    { $unset: { verificationCode: 1 }, $set: { isVerified: true } }
+    {
+      $unset: {
+        verificationCode: 1,
+        verificationCodeExpires: 1,
+      },
+      $set: { isVerified: true },
+    }
   );
 
   await createInternalNotification(
@@ -257,18 +309,72 @@ export const resendVerificationCode = asyncWrapper(
         .json(createResponse("Email is already verified", null));
     }
 
-    const verificationCode = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
+    const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const verificationCodeExpires = Date.now() + 10 * 60 * 1000;
 
     (user as any).verificationCode = verificationCode;
+    (user as any).verificationCodeExpires = verificationCodeExpires;
     await user.save();
 
-    console.log(`New verification code for ${email}: ${verificationCode}`);
+    try {
+      await sendEmail({
+        email: email,
+        subject: "PharmNow - New Verification Code",
+        message: verifyEmailTemplate({
+          verificationCode: verificationCode,
+          fullname: user.fullname,
+          year: new Date().getFullYear(),
+        }),
+      });
 
-    res
-      .status(StatusCodes.OK)
-      .json(createResponse("New verification code sent to your email", null));
+      console.log(`New verification code for ${email}: ${verificationCode}`);
+
+      res.status(StatusCodes.OK).json(
+        createResponse("New verification code sent to your email", {
+          message:
+            "A new 4-digit verification code has been sent to your email address.",
+          expiresIn: "10 minutes",
+        })
+      );
+    } catch (emailError) {
+      console.error("Email sending failed:", emailError);
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json(
+          createResponse(
+            "Failed to send verification email. Please try again later.",
+            null
+          )
+        );
+    }
+  }
+);
+
+// CHECK VERIFICATION STATUS
+export const checkVerificationStatus = asyncWrapper(
+  async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res
+        .status(StatusCodes.BAD_REQUEST)
+        .json(createResponse("User not found", null));
+    }
+
+    const hasActiveCode =
+      (user as any).verificationCode &&
+      (user as any).verificationCodeExpires &&
+      (user as any).verificationCodeExpires > Date.now();
+
+    res.status(StatusCodes.OK).json(
+      createResponse("Verification status retrieved", {
+        isVerified: user.isVerified,
+        hasActiveVerificationCode: hasActiveCode,
+        email: user.email,
+        fullname: user.fullname,
+      })
+    );
   }
 );
 
@@ -316,34 +422,6 @@ export const changePassword = asyncWrapper(
       .json(createResponse("Password changed successfully", null));
   }
 );
-
-// GET CURRENT USER PROFILE
-export const getProfile = asyncWrapper(async (req: Request, res: Response) => {
-  const userId = req.user?.userId;
-
-  if (!userId) {
-    return res
-      .status(StatusCodes.UNAUTHORIZED)
-      .json(createResponse("Authentication required", null));
-  }
-
-  const user = await User.findById(userId)
-    .populate("favouritePharmacies", "name location logo")
-    .populate("favouriteProducts", "name price images")
-    .select(
-      "-password -verificationCode -resetPasswordCode -resetPasswordExpires -cardDetails.cvv"
-    );
-
-  if (!user) {
-    return res
-      .status(StatusCodes.NOT_FOUND)
-      .json(createResponse("User not found", null));
-  }
-
-  res
-    .status(StatusCodes.OK)
-    .json(createResponse("Profile retrieved successfully", user));
-});
 
 // REFRESH TOKEN (optional - for token refresh functionality)
 export const refreshToken = asyncWrapper(

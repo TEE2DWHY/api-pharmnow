@@ -19,6 +19,7 @@ export interface IUser extends mongoose.Document {
   blockedPharmacies: mongoose.Types.ObjectId[];
   blockedByPharmacies: mongoose.Types.ObjectId[];
   verificationCode?: string;
+  verificationCodeExpires?: number;
   resetPasswordCode?: string;
   resetPasswordExpires?: number;
   createdAt: Date;
@@ -40,12 +41,13 @@ const userSchema = new mongoose.Schema<IUser>(
       { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
     ],
     cardDetails: {
-      cardNumber: { type: String, required: true },
-      cardHolderName: { type: String, required: true },
-      expiryDate: { type: String, required: true },
-      cvv: { type: String, required: true },
+      cardNumber: { type: String },
+      cardHolderName: { type: String },
+      expiryDate: { type: String },
+      cvv: { type: String },
     },
     verificationCode: { type: String },
+    verificationCodeExpires: { type: Number },
     resetPasswordCode: { type: String },
     resetPasswordExpires: { type: Number },
     orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],

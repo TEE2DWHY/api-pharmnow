@@ -134,7 +134,7 @@ const resetPasswordTemplate = ({
                       <td style="text-align: center; padding-bottom: 30px;">
                         <h2 style="color: #1f2937; font-size: 24px; font-weight: 600; margin: 0 0 12px 0;">Reset Your Password</h2>
                         <p style="color: #6b7280; font-size: 16px; line-height: 1.5; margin: 0;">
-                          Hi ${fullName}, we received a request to reset your PharmNow account password. Click the button below to set a new password.
+                          Hi ${fullname}, we received a request to reset your PharmNow account password. Click the button below to set a new password.
                         </p>
                       </td>
                     </tr>
