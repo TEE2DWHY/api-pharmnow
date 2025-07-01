@@ -1,9 +1,18 @@
-const verifyEmailMessage = (
-  verificationCode: string,
-  fullName: string,
-  year: number
-): string => {
-  const digits = verificationCode.toString().padStart(4, "0").split("");
+interface ResetPasswordProps {
+  resetToken: string;
+  fullname: string;
+  year: number;
+  resetUrl?: string;
+}
+
+const resetPasswordTemplate = ({
+  resetToken,
+  fullname,
+  year,
+  resetUrl,
+}: ResetPasswordProps) => {
+  const passwordResetUrl =
+    resetUrl || `https://pharmnow.app/reset-password?token=${resetToken}`;
 
   return `
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -14,7 +23,7 @@ const verifyEmailMessage = (
       <meta http-equiv="X-UA-Compatible" content="IE=edge" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no" />
-      <title>Verify Your PharmNow Account</title>
+      <title>Reset Your PharmNow Password</title>
       
       <style type="text/css">
         /* Reset and Base Styles */
@@ -67,15 +76,19 @@ const verifyEmailMessage = (
             padding: 30px 20px !important;
           }
           
-          .code-container {
-            padding: 20px !important;
+          .button {
+            width: 100% !important;
+            padding: 16px 20px !important;
+            font-size: 16px !important;
           }
           
-          .digit {
-            width: 50px !important;
-            height: 50px !important;
-            font-size: 24px !important;
-            margin: 0 5px !important;
+          .token-container {
+            padding: 15px !important;
+          }
+          
+          .token-text {
+            font-size: 12px !important;
+            word-break: break-all !important;
           }
         }
       </style>
@@ -91,20 +104,20 @@ const verifyEmailMessage = (
               
               <!-- Header -->
               <tr>
-                <td class="header" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 40px 40px; text-align: center; border-radius: 12px 12px 0 0;">
+                <td class="header" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 40px 40px; text-align: center; border-radius: 12px 12px 0 0;">
                   <!-- Logo -->
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                     <tr>
                       <td align="center" style="padding-bottom: 20px;">
                         <div style="background-color: #ffffff; width: 60px; height: 60px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
-                          <span style="font-size: 28px; font-weight: bold; color: #2563eb;">⚕️</span>
+                          <span style="font-size: 28px; font-weight: bold; color: #dc2626;">🔒</span>
                         </div>
                       </td>
                     </tr>
                     <tr>
                       <td align="center">
                         <h1 style="color: #ffffff; font-size: 28px; font-weight: 700; margin: 0; letter-spacing: -0.5px;">PharmNow</h1>
-                        <p style="color: #dbeafe; font-size: 16px; margin: 8px 0 0 0;">Your trusted pharmacy partner</p>
+                        <p style="color: #fecaca; font-size: 16px; margin: 8px 0 0 0;">Password Reset Request</p>
                       </td>
                     </tr>
                   </table>
@@ -119,41 +132,48 @@ const verifyEmailMessage = (
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                     <tr>
                       <td style="text-align: center; padding-bottom: 30px;">
-                        <h2 style="color: #1f2937; font-size: 24px; font-weight: 600; margin: 0 0 12px 0;">Verify Your Account</h2>
+                        <h2 style="color: #1f2937; font-size: 24px; font-weight: 600; margin: 0 0 12px 0;">Reset Your Password</h2>
                         <p style="color: #6b7280; font-size: 16px; line-height: 1.5; margin: 0;">
-                          Hi ${fullName}, welcome to PharmNow! Please use the verification code below to complete your account setup.
+                          Hi ${fullName}, we received a request to reset your PharmNow account password. Click the button below to set a new password.
                         </p>
                       </td>
                     </tr>
                   </table>
                   
-                  <!-- Verification Code -->
+                  <!-- Reset Button -->
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                     <tr>
-                      <td align="center" class="code-container" style="background-color: #f8fafc; border-radius: 12px; padding: 30px; margin: 20px 0;">
-                        <p style="color: #374151; font-size: 14px; font-weight: 500; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 1px;">Verification Code</p>
-                        
-                        <!-- 4-Digit Code Display -->
-                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+                      <td align="center" style="padding: 30px 0;">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                           <tr>
-                            <td class="digit" style="background-color: #ffffff; border: 2px solid #e5e7eb; border-radius: 8px; width: 60px; height: 60px; text-align: center; vertical-align: middle; margin: 0 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-                              <span style="font-size: 28px; font-weight: 700; color: #2563eb;">${digits[0]}</span>
-                            </td>
-                            <td class="digit" style="background-color: #ffffff; border: 2px solid #e5e7eb; border-radius: 8px; width: 60px; height: 60px; text-align: center; vertical-align: middle; margin: 0 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-                              <span style="font-size: 28px; font-weight: 700; color: #2563eb;">${digits[1]}</span>
-                            </td>
-                            <td class="digit" style="background-color: #ffffff; border: 2px solid #e5e7eb; border-radius: 8px; width: 60px; height: 60px; text-align: center; vertical-align: middle; margin: 0 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-                              <span style="font-size: 28px; font-weight: 700; color: #2563eb;">${digits[2]}</span>
-                            </td>
-                            <td class="digit" style="background-color: #ffffff; border: 2px solid #e5e7eb; border-radius: 8px; width: 60px; height: 60px; text-align: center; vertical-align: middle; margin: 0 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-                              <span style="font-size: 28px; font-weight: 700; color: #2563eb;">${digits[3]}</span>
+                            <td class="button" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border-radius: 8px; text-align: center; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);">
+                              <a href="${passwordResetUrl}" style="display: inline-block; padding: 16px 40px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 18px; border-radius: 8px;">
+                                Reset My Password
+                              </a>
                             </td>
                           </tr>
                         </table>
-                        
-                        <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">
-                          This code expires in <strong>10 minutes</strong>
+                        <p style="color: #6b7280; font-size: 14px; margin: 15px 0 0 0;">
+                          This link expires in <strong>1 hour</strong>
                         </p>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                  <!-- Alternative Token Section -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                    <tr>
+                      <td style="text-align: center; padding: 20px 0;">
+                        <div style="background-color: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px;">
+                          <p style="color: #374151; font-size: 14px; font-weight: 500; margin: 0 0 15px 0;">
+                            Can't click the button? Copy and paste this link in your browser:
+                          </p>
+                          <div class="token-container" style="background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; padding: 12px; margin: 0 auto; max-width: 500px;">
+                            <p class="token-text" style="color: #6b7280; font-size: 13px; font-family: monospace; word-break: break-all; margin: 0; line-height: 1.4;">
+                              ${passwordResetUrl}
+                            </p>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   </table>
@@ -162,17 +182,28 @@ const verifyEmailMessage = (
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                     <tr>
                       <td style="text-align: center; padding: 30px 0;">
-                        <div style="background-color: #eff6ff; border: 1px solid #dbeafe; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-                          <p style="color: #1e40af; font-size: 14px; line-height: 1.5; margin: 0;">
-                            <strong>💡 Quick Tip:</strong> Enter this code in the PharmNow app to verify your email address and start ordering your medications with ease.
+                        <div style="background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+                          <p style="color: #92400e; font-size: 14px; line-height: 1.5; margin: 0;">
+                            <strong>⚠️ Important:</strong> If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
                           </p>
                         </div>
                         
-                        <!-- CTA Button -->
+                        <!-- Steps -->
+                        <div style="text-align: left; background-color: #f8fafc; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+                          <h3 style="color: #374151; font-size: 16px; font-weight: 600; margin: 0 0 15px 0;">How to reset your password:</h3>
+                          <ol style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                            <li style="margin-bottom: 8px;">Click the "Reset My Password" button above</li>
+                            <li style="margin-bottom: 8px;">You'll be taken to a secure page</li>
+                            <li style="margin-bottom: 8px;">Enter your new password</li>
+                            <li style="margin-bottom: 0;">Confirm your new password and save</li>
+                          </ol>
+                        </div>
+                        
+                        <!-- Alternative App Button -->
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
                           <tr>
-                            <td style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; text-align: center;">
-                              <a href="#" style="display: inline-block; padding: 14px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 8px;">
+                            <td style="background-color: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; text-align: center;">
+                              <a href="#" style="display: inline-block; padding: 12px 28px; color: #374151; text-decoration: none; font-weight: 500; font-size: 14px; border-radius: 8px;">
                                 Open PharmNow App
                               </a>
                             </td>
@@ -186,8 +217,13 @@ const verifyEmailMessage = (
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                     <tr>
                       <td style="border-top: 1px solid #e5e7eb; padding-top: 25px;">
+                        <div style="background-color: #fee2e2; border: 1px solid #fca5a5; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                          <p style="color: #991b1b; font-size: 13px; line-height: 1.4; margin: 0; text-align: center;">
+                            🚨 <strong>Security Alert:</strong> This password reset was requested from your account. If this wasn't you, please contact our support team immediately.
+                          </p>
+                        </div>
                         <p style="color: #6b7280; font-size: 13px; line-height: 1.4; margin: 0; text-align: center;">
-                          🔒 <strong>Security Notice:</strong> Never share this verification code with anyone. PharmNow will never ask for your verification code via phone or email.
+                          For your security, this reset link can only be used once and expires in 1 hour. PharmNow staff will never ask for your password or reset links.
                         </p>
                       </td>
                     </tr>
@@ -201,7 +237,7 @@ const verifyEmailMessage = (
                 <td style="background-color: #f8fafc; padding: 30px 40px; text-align: center; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
                   <p style="color: #6b7280; font-size: 14px; margin: 0 0 12px 0;">
                     Need help? Contact our support team at 
-                    <a href="mailto:support@pharmnow.com" style="color: #2563eb; text-decoration: none;">support@pharmnow.com</a>
+                    <a href="mailto:support@pharmnow.com" style="color: #dc2626; text-decoration: none;">support@pharmnow.com</a>
                   </p>
                   <p style="color: #9ca3af; font-size: 12px; margin: 0;">
                     © ${year} PharmNow. All rights reserved.
@@ -224,4 +260,4 @@ const verifyEmailMessage = (
   `;
 };
 
-export default verifyEmailMessage;
+export default resetPasswordTemplate;

@@ -4,7 +4,7 @@ interface VerifyEmailParams {
   year: number;
 }
 
-const verifyEmailMessage = ({
+const verifyEmailTemplate = ({
   verificationCode,
   fullname,
   year,
@@ -229,4 +229,4 @@ const verifyEmailMessage = ({
   `;
 };
 
-export default verifyEmailMessage;
+export default verifyEmailTemplate;

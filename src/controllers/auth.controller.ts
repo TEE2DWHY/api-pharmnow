@@ -7,7 +7,8 @@ import { generateToken } from "../helper/authHelper";
 import createResponse from "../utils/createResponse.util";
 import { createInternalNotification } from "../utils/createNotification.util";
 import { sendEmail } from "../utils/email.util";
-import verifyEmailMessage from "../services/email/template/verifyEmailTemplate";
+import verifyEmailTemplate from "../services/email/template/verifyEmailTemplate";
+import resetPasswordTemplate from "../services/email/template/resetPasswordTemplate";
 
 // REGISTER
 export const register = asyncWrapper(async (req: Request, res: Response) => {
@@ -53,7 +54,7 @@ export const register = asyncWrapper(async (req: Request, res: Response) => {
   await sendEmail({
     email: email,
     subject: "Welcome to Pharmnow",
-    message: verifyEmailMessage({
+    message: verifyEmailTemplate({
       verificationCode: verificationCode,
       fullname: newUser.fullname,
       year: new Date().getFullYear(),
@@ -133,11 +134,20 @@ export const forgotPassword = asyncWrapper(
     const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
 
     (user as any).resetPasswordCode = resetToken;
-    (user as any).resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 minutes
+    (user as any).resetPasswordExpires = Date.now() + 15 * 60 * 1000;
 
     await user.save();
 
-    console.log(`Password reset code for ${email}: ${resetToken}`);
+    await sendEmail({
+      email: email,
+      subject: "Reset Password Pharmnow",
+      message: resetPasswordTemplate({
+        resetToken: resetToken,
+        fullname: user.fullname,
+        year: new Date().getFullYear(),
+        // resetUrl: "",
+      }),
+    });
 
     res
       .status(StatusCodes.OK)
