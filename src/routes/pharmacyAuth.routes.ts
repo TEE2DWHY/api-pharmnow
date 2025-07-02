@@ -1,38 +1,50 @@
 import { Router } from "express";
-import * as pharmacyAuth from "../controllers/pharmacyAuth.controller";
+import {
+  registerPharmacy,
+  loginPharmacy,
+  verifyPharmacyCode,
+  resendPharmacyVerificationCode,
+  checkPharmacyVerificationStatus,
+  forgotPharmacyPassword,
+  resetPharmacyPassword,
+  changePharmacyPassword,
+  getPharmacyAuthProfile,
+  refreshPharmacyToken,
+} from "../controllers/pharmacyAuth.controller";
 import { authorization } from "../middlewares/authorization.middlware";
+import {
+  uploadPharmacyFiles,
+  handleUploadError,
+} from "../config/multer/upload.config";
 
 const router = Router();
 
-// Public routes (no authentication required)
-router.post("/register", pharmacyAuth.registerPharmacy);
-
-router.post("/login", pharmacyAuth.loginPharmacy);
-
-router.post("/verify-email", pharmacyAuth.verifyPharmacyCode);
-
 router.post(
-  "/resend-verification",
-
-  pharmacyAuth.resendPharmacyVerificationCode
+  "/register",
+  uploadPharmacyFiles,
+  handleUploadError,
+  registerPharmacy
 );
 
-router.post(
-  "/check-verification-status",
-  pharmacyAuth.checkPharmacyVerificationStatus
-);
+router.post("/login", loginPharmacy);
 
-router.post("/forgot-password", pharmacyAuth.forgotPharmacyPassword);
+router.post("/verify-email", verifyPharmacyCode);
 
-router.post("/reset-password", pharmacyAuth.resetPharmacyPassword);
+router.post("/resend-verification", resendPharmacyVerificationCode);
+
+router.post("/check-verification-status", checkPharmacyVerificationStatus);
+
+router.post("/forgot-password", forgotPharmacyPassword);
+
+router.post("/reset-password", resetPharmacyPassword);
 
 // Protected routes (authentication required)
 router.use(authorization);
 
-router.post("/change-password", pharmacyAuth.changePharmacyPassword);
+router.post("/change-password", changePharmacyPassword);
 
-router.get("/profile", pharmacyAuth.getPharmacyAuthProfile);
+router.get("/profile", getPharmacyAuthProfile);
 
-router.post("/refresh-token", pharmacyAuth.refreshPharmacyToken);
+router.post("/refresh-token", refreshPharmacyToken);
 
 export default router;

@@ -9,10 +9,14 @@ import { createInternalNotification } from "../utils/createNotification.util";
 import { sendEmail } from "../utils/email.util";
 import verifyEmailTemplate from "../services/email/template/verifyEmailTemplate";
 import resetPasswordTemplate from "../services/email/template/resetPasswordTemplate";
+import cloudinary from "../config/cloudinary/cloudinary.config";
 
 // PHARMACY REGISTRATION
 export const registerPharmacy = asyncWrapper(
   async (req: Request, res: Response) => {
+    let logoUrl = "";
+    let licenseDocumentUrl = "";
+
     const {
       name,
       location,
@@ -21,101 +25,192 @@ export const registerPharmacy = asyncWrapper(
       password,
       phonenumber,
       pcnNumber,
-      licenseDocument,
-      logo,
       referralCode,
     } = req.body;
 
-    // Check if pharmacy already exists
-    const existingPharmacy = await Pharmacy.findOne({
-      $or: [{ email }, { pcnNumber }],
-    });
-
-    if (existingPharmacy) {
-      const conflictField =
-        existingPharmacy.email === email ? "Email" : "PCN Number";
-      return res
-        .status(StatusCodes.CONFLICT)
-        .json(createResponse(`${conflictField} already registered`, null));
-    }
-
-    // Check if referral code already exists (if provided)
-    if (referralCode) {
-      const existingReferral = await Pharmacy.findOne({ referralCode });
-      if (existingReferral) {
-        return res
-          .status(StatusCodes.CONFLICT)
-          .json(createResponse("Referral code already exists", null));
-      }
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(
-      password,
-      Number(process.env.SALT_ROUNDS) || 12
-    );
-
-    // Generate verification code and expiration
-    const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
-    const verificationCodeExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-    // Create pharmacy
-    const newPharmacy = new Pharmacy({
-      name,
-      location,
-      contactNumber,
-      email,
-      password: hashedPassword,
-      phonenumber,
-      pcnNumber,
-      licenseDocument,
-      logo,
-      referralCode,
-      products: [],
-      blockedUsers: [],
-      blockedByUsers: [],
-      verificationCode: verificationCode,
-      verificationCodeExpires: verificationCodeExpires,
-    });
-
-    await newPharmacy.save();
-
     try {
-      await sendEmail({
-        email: email,
-        subject: "Welcome to PharmNow - Verify Your Pharmacy",
-        message: verifyEmailTemplate({
-          verificationCode: verificationCode,
-          fullname: newPharmacy.name,
-          year: new Date().getFullYear(),
-        }),
+      const existingPharmacy = await Pharmacy.findOne({
+        $or: [{ email }, { pcnNumber }],
       });
 
-      res.status(StatusCodes.CREATED).json(
-        createResponse(
-          "Pharmacy registered successfully. Please verify your email.",
-          {
-            email: newPharmacy.email,
-            name: newPharmacy.name,
-            isVerified: newPharmacy.isVerified,
-            message:
-              "A 4-digit verification code has been sent to your email address.",
-          }
-        )
+      if (existingPharmacy) {
+        const conflictField =
+          existingPharmacy.email === email ? "Email" : "PCN Number";
+        return res
+          .status(StatusCodes.CONFLICT)
+          .json(createResponse(`${conflictField} already registered`, null));
+      }
+
+      if (referralCode) {
+        const existingReferral = await Pharmacy.findOne({ referralCode });
+        if (existingReferral) {
+          return res
+            .status(StatusCodes.CONFLICT)
+            .json(createResponse("Referral code already exists", null));
+        }
+      }
+
+      if (
+        req.files &&
+        typeof req.files === "object" &&
+        !Array.isArray(req.files)
+      ) {
+        if (req.files.logo && Array.isArray(req.files.logo)) {
+          const logoFile = req.files.logo[0];
+          const logoResult = await cloudinary.uploader.upload(logoFile.path, {
+            folder: "pharmnow/pharmacy-logos",
+            transformation: [
+              { width: 300, height: 300, crop: "fill" },
+              { quality: "auto" },
+              { format: "auto" },
+            ],
+          });
+          logoUrl = logoResult.secure_url;
+        }
+
+        if (
+          req.files.licenseDocument &&
+          Array.isArray(req.files.licenseDocument)
+        ) {
+          const licenseFile = req.files.licenseDocument[0];
+          const licenseResult = await cloudinary.uploader.upload(
+            licenseFile.path,
+            {
+              folder: "pharmnow/pharmacy-licenses",
+              resource_type: "auto",
+            }
+          );
+          licenseDocumentUrl = licenseResult.secure_url;
+        }
+      } else if (req.file) {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "pharmnow/pharmacy-uploads",
+          transformation: [
+            { width: 300, height: 300, crop: "fill" },
+            { quality: "auto" },
+            { format: "auto" },
+          ],
+        });
+        logoUrl = result.secure_url;
+      }
+
+      if (!logoUrl) {
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json(createResponse("Logo image is required", null));
+      }
+
+      if (!licenseDocumentUrl) {
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json(createResponse("License document is required", null));
+      }
+
+      const hashedPassword = await bcrypt.hash(
+        password,
+        Number(process.env.SALT_ROUNDS) || 12
       );
-    } catch (emailError) {
-      console.error("Email sending failed:", emailError);
-      res.status(StatusCodes.CREATED).json(
-        createResponse(
-          "Pharmacy registered successfully, but email verification could not be sent. Please try again.",
-          {
-            email: newPharmacy.email,
-            name: newPharmacy.name,
-            isVerified: newPharmacy.isVerified,
-            emailSent: false,
+
+      const verificationCode = Math.floor(
+        1000 + Math.random() * 9000
+      ).toString();
+      const verificationCodeExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+      const newPharmacy = new Pharmacy({
+        name,
+        location,
+        contactNumber,
+        email,
+        password: hashedPassword,
+        phonenumber,
+        pcnNumber,
+        licenseDocument: licenseDocumentUrl,
+        logo: logoUrl,
+        referralCode,
+        products: [],
+        blockedUsers: [],
+        blockedByUsers: [],
+        verificationCode: verificationCode,
+        verificationCodeExpires: verificationCodeExpires,
+      });
+
+      await newPharmacy.save();
+
+      try {
+        await sendEmail({
+          email: email,
+          subject: "Welcome to PharmNow - Verify Your Pharmacy",
+          message: verifyEmailTemplate({
+            verificationCode: verificationCode,
+            fullname: newPharmacy.name,
+            year: new Date().getFullYear(),
+          }),
+        });
+
+        res.status(StatusCodes.CREATED).json(
+          createResponse(
+            "Pharmacy registered successfully. Please verify your email.",
+            {
+              email: newPharmacy.email,
+              name: newPharmacy.name,
+              isVerified: newPharmacy.isVerified,
+              logo: newPharmacy.logo,
+              licenseDocument: newPharmacy.licenseDocument,
+              message:
+                "A 4-digit verification code has been sent to your email address.",
+            }
+          )
+        );
+      } catch (emailError) {
+        console.error("Email sending failed:", emailError);
+        res.status(StatusCodes.CREATED).json(
+          createResponse(
+            "Pharmacy registered successfully, but email verification could not be sent. Please try again.",
+            {
+              email: newPharmacy.email,
+              name: newPharmacy.name,
+              isVerified: newPharmacy.isVerified,
+              logo: newPharmacy.logo,
+              emailSent: false,
+            }
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Pharmacy registration error:", error);
+
+      // Clean up uploaded files if pharmacy creation fails
+      if (logoUrl) {
+        try {
+          const publicId = logoUrl.split("/").pop()?.split(".")[0];
+          if (publicId) {
+            await cloudinary.uploader.destroy(
+              `pharmnow/pharmacy-logos/${publicId}`
+            );
           }
-        )
-      );
+        } catch (cleanupError) {
+          console.error("Error cleaning up logo:", cleanupError);
+        }
+      }
+
+      if (licenseDocumentUrl) {
+        try {
+          const publicId = licenseDocumentUrl.split("/").pop()?.split(".")[0];
+          if (publicId) {
+            await cloudinary.uploader.destroy(
+              `pharmnow/pharmacy-licenses/${publicId}`
+            );
+          }
+        } catch (cleanupError) {
+          console.error("Error cleaning up license document:", cleanupError);
+        }
+      }
+
+      return res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json(
+          createResponse("Failed to register pharmacy. Please try again.", null)
+        );
     }
   }
 );
