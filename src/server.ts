@@ -15,7 +15,7 @@ const start = async () => {
     console.log(chalk.green("✔ Successfully connected to MongoDB"));
     app.listen(PORT, () => {
       console.log(
-        chalk.greenBright(`🚀 Server is running on port ${PORT}`) +
+        chalk.green(`🚀 Server is running on port ${PORT}`) +
           chalk.blue(` at http://localhost:${PORT}`)
       );
     });
