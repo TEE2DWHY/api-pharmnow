@@ -18,6 +18,12 @@ export interface IUser extends mongoose.Document {
   orders: mongoose.Types.ObjectId[];
   blockedPharmacies: mongoose.Types.ObjectId[];
   blockedByPharmacies: mongoose.Types.ObjectId[];
+  medications: mongoose.Types.ObjectId[];
+  medicationSettings?: {
+    enableReminders: boolean;
+    defaultReminderTime: string;
+    snoozeMinutes: number;
+  };
   verificationCode?: string;
   verificationCodeExpires?: number;
   resetPasswordCode?: string;
@@ -46,10 +52,6 @@ const userSchema = new mongoose.Schema<IUser>(
       expiryDate: { type: String },
       cvv: { type: String },
     },
-    verificationCode: { type: String },
-    verificationCodeExpires: { type: Number },
-    resetPasswordCode: { type: String },
-    resetPasswordExpires: { type: Number },
     orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
     blockedPharmacies: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Pharmacy" },
@@ -57,6 +59,16 @@ const userSchema = new mongoose.Schema<IUser>(
     blockedByPharmacies: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Pharmacy" },
     ],
+    medications: [{ type: mongoose.Schema.Types.ObjectId, ref: "Medication" }],
+    medicationSettings: {
+      enableReminders: { type: Boolean, default: true },
+      defaultReminderTime: { type: String, default: "08:00" },
+      snoozeMinutes: { type: Number, default: 15 },
+    },
+    verificationCode: { type: String },
+    verificationCodeExpires: { type: Number },
+    resetPasswordCode: { type: String },
+    resetPasswordExpires: { type: Number },
   },
   {
     timestamps: true,
