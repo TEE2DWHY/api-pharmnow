@@ -287,7 +287,7 @@ export const removeProduct = asyncWrapper(
 // GET PHARMACY PRODUCTS
 export const getPharmacyProducts = asyncWrapper(
   async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.user?.userId;
     const {
       page = 1,
       limit = 10,

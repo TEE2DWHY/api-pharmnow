@@ -10,10 +10,10 @@ const router = Router();
 // Public routes
 router.get("/search", pharmacyController.searchPharmacies);
 router.get("/", pharmacyController.getAllPharmacies);
-router.get("/:id/products", pharmacyController.getPharmacyProducts);
 
 router.use(authorization);
 router.get("/get-pharmacy", pharmacyController.getPharmacy);
+router.get("/products", pharmacyController.getPharmacyProducts);
 router.get(
   "/profile/me",
   authorizeRoles("Pharmacy"),
