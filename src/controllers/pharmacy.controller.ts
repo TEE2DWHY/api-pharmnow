@@ -66,55 +66,51 @@ export const getAllPharmacies = asyncWrapper(
   }
 );
 
-// GET PHARMACY BY ID
-export const getPharmacyById = asyncWrapper(
-  async (req: Request, res: Response) => {
-    const { id } = req.params;
+// GET PHARMACY
+export const getPharmacy = asyncWrapper(async (req: Request, res: Response) => {
+  const id = req.user?.userId;
 
-    const pharmacy = await Pharmacy.findById(id)
-      .populate({
-        path: "products",
-        select: "name price description images category inStock quantity",
-        options: { sort: { createdAt: -1 } },
-      })
-      .select("-blockedUsers -blockedByUsers");
+  const pharmacy = await Pharmacy.findById(id)
+    .populate({
+      path: "products",
+      select: "name price description images category inStock quantity",
+      options: { sort: { createdAt: -1 } },
+    })
+    .select("-blockedUsers -blockedByUsers");
 
-    if (!pharmacy) {
-      return res
-        .status(StatusCodes.NOT_FOUND)
-        .json(createResponse("Pharmacy not found", null));
-    }
-
-    const [totalProducts, totalOrders, averageRating] = await Promise.all([
-      Product.countDocuments({ pharmacyId: id }),
-      Order.countDocuments({ pharmacyId: id }),
-      Order.aggregate([
-        {
-          $match: {
-            pharmacyId: pharmacy._id,
-            "review.rating": { $exists: true },
-          },
-        },
-        { $group: { _id: null, avgRating: { $avg: "$review.rating" } } },
-      ]).then((result) => result[0]?.avgRating || 0),
-    ]);
-
-    const pharmacyWithStats = {
-      ...pharmacy.toObject(),
-      statistics: {
-        totalProducts,
-        totalOrders,
-        averageRating: Math.round(averageRating * 10) / 10,
-      },
-    };
-
-    res
-      .status(StatusCodes.OK)
-      .json(
-        createResponse("Pharmacy retrieved successfully", pharmacyWithStats)
-      );
+  if (!pharmacy) {
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json(createResponse("Pharmacy not found", null));
   }
-);
+
+  const [totalProducts, totalOrders, averageRating] = await Promise.all([
+    Product.countDocuments({ pharmacyId: id }),
+    Order.countDocuments({ pharmacyId: id }),
+    Order.aggregate([
+      {
+        $match: {
+          pharmacyId: pharmacy._id,
+          "review.rating": { $exists: true },
+        },
+      },
+      { $group: { _id: null, avgRating: { $avg: "$review.rating" } } },
+    ]).then((result) => result[0]?.avgRating || 0),
+  ]);
+
+  const pharmacyWithStats = {
+    ...pharmacy.toObject(),
+    statistics: {
+      totalProducts,
+      totalOrders,
+      averageRating: Math.round(averageRating * 10) / 10,
+    },
+  };
+
+  res
+    .status(StatusCodes.OK)
+    .json(createResponse("Pharmacy retrieved successfully", pharmacyWithStats));
+});
 
 // UPDATE PHARMACY PROFILE
 export const updatePharmacyProfile = asyncWrapper(

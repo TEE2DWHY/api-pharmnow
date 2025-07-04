@@ -8,6 +8,7 @@ import messageRoutes from "./message.routes";
 import cartRoutes from "./cart.routes";
 import notificationRoutes from "./notification.routes";
 import medicationRoutes from "./medication.routes";
+import pharmacyAuthRoutes from "./pharmacyAuth.routes";
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use("/v1/messages", messageRoutes);
 router.use("/v1/cart", cartRoutes);
 router.use("/v1/notifications", notificationRoutes);
 router.use("/v1/medications", medicationRoutes);
+router.use("/v1/pharmacyAuth", pharmacyAuthRoutes);
 
 export default router;

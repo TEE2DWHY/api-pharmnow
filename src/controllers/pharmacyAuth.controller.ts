@@ -7,9 +7,9 @@ import { generateToken } from "../helper/authHelper";
 import createResponse from "../utils/createResponse.util";
 import { createInternalNotification } from "../utils/createNotification.util";
 import { sendEmail } from "../utils/email.util";
-import verifyEmailTemplate from "../services/email/template/verifyEmailTemplate";
 import resetPasswordTemplate from "../services/email/template/resetPasswordTemplate";
 import cloudinary from "../config/cloudinary/cloudinary.config";
+import verifyPharmacyEmailTemplate from "../services/email/template/verifyPharmacyEmailTemplate";
 
 // PHARMACY REGISTRATION
 export const registerPharmacy = asyncWrapper(
@@ -27,6 +27,8 @@ export const registerPharmacy = asyncWrapper(
       pcnNumber,
       referralCode,
     } = req.body;
+
+    console.log(req.body);
 
     try {
       const existingPharmacy = await Pharmacy.findOne({
@@ -114,7 +116,7 @@ export const registerPharmacy = asyncWrapper(
       const verificationCode = Math.floor(
         1000 + Math.random() * 9000
       ).toString();
-      const verificationCodeExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+      const verificationCodeExpires = Date.now() + 10 * 60 * 1000;
 
       const newPharmacy = new Pharmacy({
         name,
@@ -140,9 +142,9 @@ export const registerPharmacy = asyncWrapper(
         await sendEmail({
           email: email,
           subject: "Welcome to PharmNow - Verify Your Pharmacy",
-          message: verifyEmailTemplate({
+          message: verifyPharmacyEmailTemplate({
             verificationCode: verificationCode,
-            fullname: newPharmacy.name,
+            pharmacyName: newPharmacy.name,
             year: new Date().getFullYear(),
           }),
         });
@@ -384,9 +386,9 @@ export const resendPharmacyVerificationCode = asyncWrapper(
       await sendEmail({
         email: email,
         subject: "PharmNow - New Verification Code",
-        message: verifyEmailTemplate({
+        message: verifyPharmacyEmailTemplate({
           verificationCode: verificationCode,
-          fullname: pharmacy.name,
+          pharmacyName: pharmacy.name,
           year: new Date().getFullYear(),
         }),
       });

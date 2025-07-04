@@ -56,7 +56,6 @@ export const uploadPharmacyFiles = upload.fields([
 
 export const uploadSingle = (fieldName: string) => upload.single(fieldName);
 
-// Error handling middleware for multer
 export const handleUploadError = (
   error: any,
   req: Request,

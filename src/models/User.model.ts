@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema<IUser>(
     fullname: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     phonenumber: { type: String, required: true },
-    deliveryAddress: { type: String, required: true },
+    deliveryAddress: { type: String },
     isVerified: { type: Boolean, default: false },
     password: { type: String, required: true },
     favouritePharmacies: [

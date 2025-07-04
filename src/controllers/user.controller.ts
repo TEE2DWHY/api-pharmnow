@@ -85,15 +85,22 @@ export const updateProfile = asyncWrapper(
         .json(createResponse("Authentication required", null));
     }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      {
-        ...(fullname && { fullname }),
-        ...(phonenumber && { phonenumber }),
-        ...(deliveryAddress && { deliveryAddress }),
-      },
-      { new: true, runValidators: true }
-    ).select(
+    const updateData: any = {};
+
+    if (fullname !== undefined) {
+      updateData.fullname = fullname;
+    }
+    if (phonenumber !== undefined) {
+      updateData.phonenumber = phonenumber;
+    }
+    if (deliveryAddress !== undefined) {
+      updateData.deliveryAddress = deliveryAddress;
+    }
+
+    const user = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+    }).select(
       "-password -verificationCode -resetPasswordCode -resetPasswordExpires"
     );
 
