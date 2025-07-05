@@ -41,7 +41,7 @@ router.post("/reset-password", resetPharmacyPassword);
 // Protected routes (authentication required)
 router.use(authorization);
 
-router.post("/change-password", changePharmacyPassword);
+router.put("/change-password", changePharmacyPassword);
 
 router.get("/profile", getPharmacyAuthProfile);
 
