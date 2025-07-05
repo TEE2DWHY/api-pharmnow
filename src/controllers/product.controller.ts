@@ -6,6 +6,7 @@ import Pharmacy from "../models/Pharmacy.model";
 import Product from "../models/Product.model";
 import Order from "../models/Order.model";
 import createResponse from "../utils/createResponse.util";
+import cloudinary from "../config/cloudinary/cloudinary.config";
 
 // GET ALL PRODUCTS
 export const getAllProducts = asyncWrapper(
@@ -133,7 +134,7 @@ export const createProduct = asyncWrapper(
   async (req: Request, res: Response) => {
     const pharmacyId = req.user?.userId;
     const userType = req.user?.userType;
-    const productData = req.body;
+    let imageUrl = "";
 
     if (userType !== "Pharmacy") {
       return res
@@ -154,23 +155,74 @@ export const createProduct = asyncWrapper(
         .json(createResponse("Pharmacy not found", null));
     }
 
-    const product = await Product.create({
-      ...productData,
-      pharmacyId,
-    });
+    try {
+      // Handle image upload if present
+      if (req.file) {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "pharmnow/product-images",
+          transformation: [
+            { width: 500, height: 500, crop: "fill" },
+            { quality: "auto" },
+            { format: "auto" },
+          ],
+        });
+        imageUrl = result.secure_url;
+      }
 
-    await Pharmacy.findByIdAndUpdate(pharmacyId, {
-      $push: { products: product._id },
-    });
+      // If no image uploaded, use a default placeholder
+      if (!imageUrl) {
+        imageUrl =
+          "https://via.placeholder.com/500x500/E5E7EB/9CA3AF?text=No+Image";
+      }
 
-    const populatedProduct = await Product.findById(product._id).populate(
-      "pharmacyId",
-      "name location logo"
-    );
+      // Create product data object
+      const productData = {
+        ...req.body,
+        pharmacyId,
+        imageUrl, // Use the uploaded image URL or placeholder
+      };
 
-    res
-      .status(StatusCodes.CREATED)
-      .json(createResponse("Product created successfully", populatedProduct));
+      const product = await Product.create(productData);
+
+      await Pharmacy.findByIdAndUpdate(pharmacyId, {
+        $push: { products: product._id },
+      });
+
+      const populatedProduct = await Product.findById(product._id).populate(
+        "pharmacyId",
+        "name location logo"
+      );
+
+      res
+        .status(StatusCodes.CREATED)
+        .json(createResponse("Product created successfully", populatedProduct));
+    } catch (error) {
+      console.error("Product creation error:", error);
+
+      // Clean up uploaded image if product creation fails
+      if (
+        imageUrl &&
+        imageUrl !==
+          "https://via.placeholder.com/500x500/E5E7EB/9CA3AF?text=No+Image"
+      ) {
+        try {
+          const publicId = imageUrl.split("/").pop()?.split(".")[0];
+          if (publicId) {
+            await cloudinary.uploader.destroy(
+              `pharmnow/product-images/${publicId}`
+            );
+          }
+        } catch (cleanupError) {
+          console.error("Error cleaning up product image:", cleanupError);
+        }
+      }
+
+      return res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json(
+          createResponse("Failed to create product. Please try again.", null)
+        );
+    }
   }
 );
 

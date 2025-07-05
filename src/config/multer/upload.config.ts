@@ -35,6 +35,12 @@ const fileFilter = (
     } else {
       cb(new Error("License document must be an image or PDF file"));
     }
+  } else if (file.fieldname === "image") {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Product image must be an image file (jpg, jpeg, png)"));
+    }
   } else {
     cb(new Error("Unexpected field"));
   }
@@ -48,12 +54,16 @@ const upload = multer({
   },
 });
 
-// (multiple files)
+// For pharmacy registration (multiple files)
 export const uploadPharmacyFiles = upload.fields([
   { name: "logo", maxCount: 1 },
   { name: "licenseDocument", maxCount: 1 },
 ]);
 
+// For product creation (single image)
+export const uploadProductImage = upload.single("image");
+
+// Generic single file upload
 export const uploadSingle = (fieldName: string) => upload.single(fieldName);
 
 export const handleUploadError = (
@@ -79,7 +89,8 @@ export const handleUploadError = (
 
   if (
     error.message.includes("must be an image") ||
-    error.message.includes("must be an image or PDF")
+    error.message.includes("must be an image or PDF") ||
+    error.message.includes("Product image must be an image")
   ) {
     return res.status(400).json({
       message: error.message,

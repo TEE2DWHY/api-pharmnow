@@ -4,6 +4,10 @@ import {
   authorization,
   authorizeRoles,
 } from "../middlewares/authorization.middlware";
+import {
+  uploadProductImage,
+  handleUploadError,
+} from "../config/multer/upload.config";
 
 const router = Router();
 
@@ -17,7 +21,13 @@ router.get("/:id", productController.getProductById);
 
 router.use(authorization);
 
-router.post("/", authorizeRoles("Pharmacy"), productController.createProduct);
+router.post(
+  "/",
+  authorizeRoles("Pharmacy"),
+  uploadProductImage,
+  handleUploadError,
+  productController.createProduct
+);
 router.put("/:id", authorizeRoles("Pharmacy"), productController.updateProduct);
 router.delete(
   "/:id",
