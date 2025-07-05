@@ -7,6 +7,7 @@ import {
 import {
   uploadProductImage,
   handleUploadError,
+  uploadSingle,
 } from "../config/multer/upload.config";
 
 const router = Router();
@@ -17,9 +18,9 @@ router.get("/search", productController.searchProducts);
 router.get("/categories", productController.getProductCategories);
 router.get("/featured", productController.getFeaturedProducts);
 router.get("/category/:category", productController.getProductsByCategory);
-router.get("/:id", productController.getProductById);
 
 router.use(authorization);
+router.get("/:id", productController.getProductById);
 
 router.post(
   "/",
@@ -28,7 +29,12 @@ router.post(
   handleUploadError,
   productController.createProduct
 );
-router.put("/:id", authorizeRoles("Pharmacy"), productController.updateProduct);
+router.put(
+  "/:id",
+  authorizeRoles("Pharmacy"),
+  uploadSingle("image"),
+  productController.updateProduct
+);
 router.delete(
   "/:id",
   authorizeRoles("Pharmacy"),

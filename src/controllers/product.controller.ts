@@ -156,7 +156,6 @@ export const createProduct = asyncWrapper(
     }
 
     try {
-      // Handle image upload if present
       if (req.file) {
         const result = await cloudinary.uploader.upload(req.file.path, {
           folder: "pharmnow/product-images",
@@ -169,17 +168,15 @@ export const createProduct = asyncWrapper(
         imageUrl = result.secure_url;
       }
 
-      // If no image uploaded, use a default placeholder
       if (!imageUrl) {
         imageUrl =
           "https://via.placeholder.com/500x500/E5E7EB/9CA3AF?text=No+Image";
       }
 
-      // Create product data object
       const productData = {
         ...req.body,
         pharmacyId,
-        imageUrl, // Use the uploaded image URL or placeholder
+        imageUrl,
       };
 
       const product = await Product.create(productData);
@@ -199,7 +196,6 @@ export const createProduct = asyncWrapper(
     } catch (error) {
       console.error("Product creation error:", error);
 
-      // Clean up uploaded image if product creation fails
       if (
         imageUrl &&
         imageUrl !==
@@ -216,7 +212,6 @@ export const createProduct = asyncWrapper(
           console.error("Error cleaning up product image:", cleanupError);
         }
       }
-
       return res
         .status(StatusCodes.INTERNAL_SERVER_ERROR)
         .json(
@@ -232,7 +227,7 @@ export const updateProduct = asyncWrapper(
     const { id } = req.params;
     const pharmacyId = req.user?.userId;
     const userType = req.user?.userType;
-    const updateData = req.body;
+    let imageUrl = "";
 
     if (userType !== "Pharmacy") {
       return res
@@ -258,14 +253,110 @@ export const updateProduct = asyncWrapper(
         );
     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    }).populate("pharmacyId", "name location logo");
+    try {
+      if (req.file) {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "pharmnow/product-images",
+          transformation: [
+            { width: 500, height: 500, crop: "fill" },
+            { quality: "auto" },
+            { format: "auto" },
+          ],
+        });
+        imageUrl = result.secure_url;
 
-    res
-      .status(StatusCodes.OK)
-      .json(createResponse("Product updated successfully", updatedProduct));
+        if (
+          product.imageUrl &&
+          product.imageUrl !== imageUrl &&
+          !product.imageUrl.includes("placeholder") &&
+          !product.imageUrl.includes("via.placeholder.com")
+        ) {
+          try {
+            const publicId = product.imageUrl.split("/").pop()?.split(".")[0];
+            if (publicId) {
+              await cloudinary.uploader.destroy(
+                `pharmnow/product-images/${publicId}`
+              );
+            }
+          } catch (cleanupError) {
+            console.error("Error cleaning up old image:", cleanupError);
+          }
+        }
+      }
+
+      let finalImageUrl = product.imageUrl;
+
+      if (imageUrl) {
+        finalImageUrl = imageUrl;
+      } else if (req.body.imageUrl === "" || req.body.imageUrl === null) {
+        finalImageUrl =
+          "https://via.placeholder.com/500x500/E5E7EB/9CA3AF?text=No+Image";
+
+        if (
+          product.imageUrl &&
+          !product.imageUrl.includes("placeholder") &&
+          !product.imageUrl.includes("via.placeholder.com")
+        ) {
+          try {
+            const publicId = product.imageUrl.split("/").pop()?.split(".")[0];
+            if (publicId) {
+              await cloudinary.uploader.destroy(
+                `pharmnow/product-images/${publicId}`
+              );
+            }
+          } catch (cleanupError) {
+            console.error("Error cleaning up removed image:", cleanupError);
+          }
+        }
+      }
+
+      const updateData = {
+        ...req.body,
+        imageUrl: finalImageUrl,
+      };
+
+      Object.keys(updateData).forEach((key) => {
+        if (
+          updateData[key] === undefined ||
+          (updateData[key] === null && key !== "imageUrl")
+        ) {
+          delete updateData[key];
+        }
+      });
+
+      const updatedProduct = await Product.findByIdAndUpdate(id, updateData, {
+        new: true,
+        runValidators: true,
+      }).populate("pharmacyId", "name location logo");
+
+      res
+        .status(StatusCodes.OK)
+        .json(createResponse("Product updated successfully", updatedProduct));
+    } catch (error) {
+      console.error("Product update error:", error);
+
+      if (imageUrl) {
+        try {
+          const publicId = imageUrl.split("/").pop()?.split(".")[0];
+          if (publicId) {
+            await cloudinary.uploader.destroy(
+              `pharmnow/product-images/${publicId}`
+            );
+          }
+        } catch (cleanupError) {
+          console.error(
+            "Error cleaning up image after update failure:",
+            cleanupError
+          );
+        }
+      }
+
+      return res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json(
+          createResponse("Failed to update product. Please try again.", null)
+        );
+    }
   }
 );
 

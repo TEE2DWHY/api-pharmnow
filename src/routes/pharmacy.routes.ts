@@ -22,7 +22,6 @@ router.get(
 router.put(
   "/profile/update",
   authorizeRoles("Pharmacy"),
-
   pharmacyController.updatePharmacyProfile
 );
 router.get(
